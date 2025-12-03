@@ -7,17 +7,17 @@ from .base_parser import BaseParser
 
 logger = logging.getLogger(__name__)
 
-class AmazonParser(BaseParser):
+class FlipkartParser(BaseParser):
     def __init__(self):
-        super().__init__("amazon.in")
+        super().__init__("flipkart.com")
         
     def parse_price(self, html: str) -> Optional[Dict]:
         soup = BeautifulSoup(html, 'lxml')
         
-        # Strategy 1: Standard price span
-        price_whole = soup.select_one('.a-price-whole')
-        if price_whole:
-            price_text = price_whole.get_text().replace(',', '').replace('₹', '').strip()
+        # Strategy 1: Price div
+        price_div = soup.select_one('div._30jeq3._16Jk6d')
+        if price_div:
+            price_text = price_div.get_text().replace(',', '').replace('₹', '').strip()
             try:
                 return {
                     "price": float(price_text),
@@ -27,7 +27,20 @@ class AmazonParser(BaseParser):
             except ValueError:
                 pass
         
-        # Strategy 2: JSON-LD structured data
+        # Strategy 2: Alternative selector
+        alt_price = soup.select_one('._30jeq3')
+        if alt_price:
+            price_text = alt_price.get_text().replace(',', '').replace('₹', '').strip()
+            try:
+                return {
+                    "price": float(price_text),
+                    "currency": "INR",
+                    "method": "alt_selector"
+                }
+            except ValueError:
+                pass
+        
+        # Strategy 3: JSON-LD
         scripts = soup.find_all('script', type='application/ld+json')
         for script in scripts:
             try:
@@ -42,18 +55,6 @@ class AmazonParser(BaseParser):
                         }
             except:
                 continue
-        
-        # Strategy 3: Meta tags
-        meta_price = soup.find('meta', property='product:price:amount')
-        if meta_price and meta_price.get('content'):
-            try:
-                return {
-                    "price": float(meta_price['content']),
-                    "currency": "INR",
-                    "method": "meta_tag"
-                }
-            except ValueError:
-                pass
         
         logger.warning(f"Could not extract price from {self.domain}")
         return None
