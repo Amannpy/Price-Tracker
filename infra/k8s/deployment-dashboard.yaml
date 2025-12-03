@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meldit-dashboard
+  namespace: meldit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meldit-dashboard
+  template:
+    metadata:
+      labels:
+        app: meldit-dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: your-docker-registry/meldit-dashboard:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: meldit-secrets
+                  key: database_url
+          ports:
+            - containerPort: 8501
+
+

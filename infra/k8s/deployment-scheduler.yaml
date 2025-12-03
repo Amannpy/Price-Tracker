@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meldit-scheduler
+  namespace: meldit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meldit-scheduler
+  template:
+    metadata:
+      labels:
+        app: meldit-scheduler
+    spec:
+      containers:
+        - name: scheduler
+          image: your-docker-registry/meldit-scraper:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "services/scheduler/scheduler.py"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: meldit-secrets
+                  key: database_url
+            - name: SCHEDULER_INTERVAL_SECONDS
+              value: "300"
+            - name: SCHEDULER_METRICS_PORT
+              value: "8002"
+          ports:
+            - containerPort: 8002
+              name: metrics
+

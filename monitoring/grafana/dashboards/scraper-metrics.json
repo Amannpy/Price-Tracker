@@ -1,0 +1,27 @@
+{
+  "title": "MeldIt Scraper Metrics",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Successful Jobs (5m)",
+      "targets": [
+        {
+          "expr": "sum(increase(scraper_jobs_success_total[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Failed Jobs (5m)",
+      "targets": [
+        {
+          "expr": "sum(increase(scraper_jobs_failed_total[5m]))"
+        }
+      ]
+    }
+  ]
+}
+
+

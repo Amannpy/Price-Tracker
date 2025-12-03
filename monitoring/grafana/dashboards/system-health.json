@@ -1,0 +1,27 @@
+{
+  "title": "MeldIt System Health",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Redis Up",
+      "targets": [
+        {
+          "expr": "up{job=\"redis\"}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Postgres Up",
+      "targets": [
+        {
+          "expr": "up{job=\"postgres\"}"
+        }
+      ]
+    }
+  ]
+}
+
+

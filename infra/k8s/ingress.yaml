@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: meldit-dashboard
+  namespace: meldit
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: meldit.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: meldit-dashboard
+                port:
+                  number: 80
+
+

@@ -3,7 +3,12 @@ import random
 import logging
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 from typing import Optional, Dict
-from retry_decorator import retry_backoff
+
+# Support both package and script-style imports for tests / runtime
+try:
+    from .retry_decorator import retry_backoff
+except ImportError:
+    from retry_decorator import retry_backoff
 
 logger = logging.getLogger(__name__)
 

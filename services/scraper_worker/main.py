@@ -4,14 +4,28 @@ import os
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
-from proxy_manager import ProxyManager
-from ua_manager import pick_ua, get_random_headers
-from playwright_driver import PlaywrightDriver
-from parsers.amazon import AmazonParser
-from parsers.flipkart import FlipkartParser
-from db_manager import DBManager
-from alert_manager import AlertManager
+
+# Support both "python services/scraper_worker/main.py" and imports via package
+try:  # package-relative imports (for tests, python -m)
+    from .proxy_manager import ProxyManager
+    from .ua_manager import pick_ua, get_random_headers
+    from .playwright_driver import PlaywrightDriver
+    from .parsers.amazon import AmazonParser
+    from .parsers.flipkart import FlipkartParser
+    from .parsers.generic import GenericParser
+    from .db_manager import DBManager
+    from .alert_manager import AlertManager
+except ImportError:  # script-style fallback
+    from proxy_manager import ProxyManager
+    from ua_manager import pick_ua, get_random_headers
+    from playwright_driver import PlaywrightDriver
+    from parsers.amazon import AmazonParser
+    from parsers.flipkart import FlipkartParser
+    from parsers.generic import GenericParser
+    from db_manager import DBManager
+    from alert_manager import AlertManager
 import redis
+from prometheus_client import Counter, Gauge, start_http_server
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +41,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SCRAPE_SUCCESS = Counter("scraper_success_total", "Number of successful scrapes", ["domain"])
+SCRAPE_FAILURE = Counter("scraper_failure_total", "Number of failed scrapes", ["domain"])
+SCRAPE_CAPTCHA = Counter("scraper_captcha_total", "Number of captcha encounters", ["domain"])
+SCRAPE_DURATION = Gauge("scraper_last_duration_seconds", "Duration of last scrape per domain", ["domain"])
+
+
 class ScraperWorker:
     def __init__(self):
         # Initialize components
@@ -41,13 +61,17 @@ class ScraperWorker:
         self.redis = redis.from_url(redis_url, decode_responses=True)
         
         # Parser registry
+        generic = GenericParser()
         self.parsers = {
             'amazon.in': AmazonParser(),
             'flipkart.com': FlipkartParser(),
+            # Fallback for any other domain
+            '*': generic,
         }
         
     def get_parser(self, domain: str):
-        return self.parsers.get(domain)
+        # Exact match, else fallback to generic parser if configured
+        return self.parsers.get(domain) or self.parsers.get("*")
     
     async def scrape_target(self, target: dict):
         target_id = target['id']
@@ -64,6 +88,7 @@ class ScraperWorker:
             await asyncio.sleep(wait_time)
         
         try:
+            start_time = asyncio.get_event_loop().time()
             # Fetch page
             result = await self.driver.fetch_page(url)
             html = result['html']
@@ -115,6 +140,8 @@ class ScraperWorker:
             
             self.db.save_price_history(save_data)
             self.db.update_scrape_job(target_id, 'success')
+            SCRAPE_SUCCESS.labels(domain=domain).inc()
+            SCRAPE_DURATION.labels(domain=domain).set(asyncio.get_event_loop().time() - start_time)
             
             # Set normal rate limit
             self.redis.setex(rate_limit_key, 5, "1")
@@ -124,6 +151,7 @@ class ScraperWorker:
         except Exception as e:
             logger.error(f"Error scraping target {target_id}: {e}")
             self.db.update_scrape_job(target_id, 'failed', str(e))
+            SCRAPE_FAILURE.labels(domain=domain).inc()
             # Set rate limit on error
             self.redis.setex(rate_limit_key, 30, "1")
     
@@ -159,4 +187,5 @@ class ScraperWorker:
 
 if __name__ == "__main__":
     worker = ScraperWorker()
+    start_http_server(int(os.getenv("SCRAPER_METRICS_PORT", "8001")))
     asyncio.run(worker.run())

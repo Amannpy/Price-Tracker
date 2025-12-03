@@ -59,7 +59,12 @@ http://localhost:8501
 ### Scraper Worker
 - **Location**: `services/scraper_worker/`
 - **Tech**: Python, Playwright, asyncio
-- **Features**: Proxy rotation, UA randomization, retry logic
+- **Features**: Proxy rotation, UA randomization, retry logic, Prometheus metrics on `:8001/metrics`
+
+### Scheduler
+- **Location**: `services/scheduler/`
+- **Tech**: Python, asyncio
+- **Features**: Periodically enqueues active targets, exposes metrics on `:8002/metrics`
 
 ### Parsers
 - **Amazon**: Multi-strategy parsing (CSS, JSON-LD, meta tags)
@@ -138,6 +143,9 @@ self.parsers = {
 - CAPTCHA encounter frequency
 - Proxy health statistics
 - Response time percentiles
+- Prometheus endpoints:
+  - Scraper worker: `http://localhost:8001/metrics`
+  - Scheduler: `http://localhost:8002/metrics`
 
 ### Alerts
 - Price drops/rises (configurable thresholds)

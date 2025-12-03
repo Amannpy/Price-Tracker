@@ -16,10 +16,10 @@ class ProxyHealth:
 class ProxyManager:
     def __init__(self, proxies: List[str], health_check_interval: int = 60):
         self.proxies = proxies[:]
-        self.health = {p: ProxyHealth(proxy=p) for p in proxies}
+        self._health = {p: ProxyHealth(proxy=p) for p in proxies}
         self.health_check_interval = health_check_interval
         self._bad_threshold = 3
-        self.recovery_time = 300
+        self._recovery_time = 300
         
     def get_proxy(self) -> Optional[str]:
         # Filter out proxies with recent failures

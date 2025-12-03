@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: meldit-config
+  namespace: meldit
+data:
+  LOG_LEVEL: INFO
+
+
